@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Groketective">
+  <rect width="128" height="128" rx="24" fill="#0B1220"/>
+  <circle cx="54" cy="54" r="28" fill="none" stroke="#E8EEF7" stroke-width="8"/>
+  <path d="M74 74 L98 98" stroke="#E8EEF7" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="54" cy="54" r="10" fill="#F59E0B"/>
+</svg>

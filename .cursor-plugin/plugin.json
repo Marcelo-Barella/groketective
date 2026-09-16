@@ -1,0 +1,30 @@
+{
+  "name": "groketective",
+  "displayName": "Groketective",
+  "version": "0.2.0",
+  "description": "Grok Bot (sand) forensics plus recovered-transcript import: app.asar, ~/.grokbot, Electron user-data, and sand-client-persistence slices.",
+  "author": {
+    "name": "Marcelo Barella",
+    "email": "marcelo.mbarella27@gmail.com"
+  },
+  "homepage": "https://github.com/Marcelo-Barella/groketective",
+  "repository": "https://github.com/Marcelo-Barella/groketective",
+  "license": "MIT",
+  "keywords": [
+    "grok-bot",
+    "sand",
+    "forensics",
+    "debugging",
+    "electron",
+    "skills",
+    "persistence"
+  ],
+  "category": "developer-tools",
+  "tags": [
+    "forensics",
+    "grok-bot",
+    "debugging"
+  ],
+  "logo": "assets/logo.svg",
+  "skills": "./skills/"
+}
