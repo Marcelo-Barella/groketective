@@ -1,0 +1,4 @@
+composer_gc_safety_net_1s:{client:!0,fallbackValues:{enabled:!1},parseValue:{enabled:!1}}
+legacy_flag:{client:!0,default:!1}
+grok_bot_task_subagent_roster:{client:!0,fallbackValues:{enabled:!0}}
+sand_mobile_bonfire_header_invite:{client:!1,default:!0}

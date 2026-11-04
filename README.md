@@ -75,7 +75,42 @@ Run smoke tests:
 
 ```bash
 ./skills/groketective/tests/smoke.sh
+./scripts/smoke-automation.sh
 ```
+
+## Cloud automations (Grok Bot tests)
+
+Mirrors the [cursor-detective](https://github.com/Marcelo-Barella/cursor-detective) daily pipelines (Cursor dev builds + feature flags + changelog-driven detective runs). This repo adds the **Grok Bot** side: download stable sand builds, diff client gates, and track Grok-relevant changelog posts.
+
+| Automation | Prompt | Pipeline script |
+|------------|--------|-----------------|
+| Feature flags | `prompts/daily-feature-flags-grokbot.md` | `scripts/run-feature-flags-pipeline.sh` |
+| Changelog / release notes | `prompts/daily-changelog-grokbot.md` | `scripts/run-changelog-pipeline.sh` |
+
+### Manual dry-run (feature flags)
+
+```bash
+bash scripts/setup-deps.sh
+bash scripts/install-pair.sh --first-run
+bash scripts/run-feature-flags-pipeline.sh
+```
+
+Artifacts land under `workspace/runs/<timestamp>/` (`manifest.json`, inventories, `extract/new/`). `versions/` holds downloaded AppImages. Both paths are gitignored.
+
+### Manual dry-run (changelog)
+
+```bash
+bash scripts/run-changelog-pipeline.sh --pages 3 --filter grokbot
+```
+
+### Cursor Automation setup
+
+1. Create two Cursor Automations (scheduled daily or on your preferred trigger).
+2. Paste the corresponding prompt from `prompts/` as the agent instructions.
+3. Enable Notion MCP and set Memory fields from `scripts/automation-memory.example.json` (database ids are **not** committed).
+4. Optional: subscribe to stable Grok Bot commits via the same Memory keys as the feature-flag prompt.
+
+**Open decisions for Marcelo:** Notion database ids/names, whether changelog should use `--filter all` with manual Notion triage, and any dedicated Grok Bot release-notes URL if posts are not on cursor.com/changelog.
 
 ## Related skills (not bundled)
 
@@ -91,6 +126,8 @@ Run smoke tests:
 groketective/
 ├── .cursor-plugin/plugin.json
 ├── assets/logo.svg
+├── prompts/
+├── scripts/
 ├── skills/groketective/
 │   ├── SKILL.md
 │   ├── reference.md

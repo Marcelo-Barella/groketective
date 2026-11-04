@@ -9,3 +9,7 @@ asar-cache/
 /main-app.cjs
 /main.cjs
 /preload-vnc.cjs
+squashfs-root/
+workspace/
+versions/
+*.AppImage

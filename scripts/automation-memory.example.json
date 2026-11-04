@@ -1,0 +1,9 @@
+{
+  "version": "",
+  "commit_sha": "",
+  "download_url": "",
+  "known_flag_names": "",
+  "known_changelog_slugs": "",
+  "notion_feature_flags_database": "CONFIGURE_IN_CURSOR_AUTOMATION",
+  "notion_changelog_database": "CONFIGURE_IN_CURSOR_AUTOMATION"
+}
