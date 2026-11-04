@@ -8,9 +8,7 @@
   "dogfood_version": "",
   "dogfood_commit_sha": "",
   "dogfood_download_url": "",
-  "GROKBOT_DOGFOOD_DOWNLOAD_URL": "SET_FROM_INTERNAL_DOGFOOD_CHANNEL",
-  "GROKBOT_DOGFOOD_VERSION": "",
-  "GROKBOT_DOGFOOD_COMMIT_SHA": "",
+  "GROKBOT_MACHINE_ID": "SET_IN_CURSOR_AUTOMATION_MEMORY_NEVER_COMMIT",
   "notion_grok_bot_dogfood_changelogs_database_id": "00000000-0000-0000-0000-000000000000",
   "notion_grok_bot_dogfood_changelogs_data_source_id": "00000000-0000-0000-0000-000000000000"
 }

@@ -66,6 +66,10 @@ Do not store only a link to the local plan file; inline the markdown like the Cu
 - Skip creating a row when `skip=true` (same commit as Memory).
 - On re-run with the same Key, **update** the existing page rather than creating duplicates.
 
+## Dogfood download
+
+Dogfood builds use **`scripts/grokbot_dogfood/sync.py`** (see skill above), not `cursor.com/api/download?releaseTrack=dogfood`.
+
 ## Related files
 
 | File | Purpose |

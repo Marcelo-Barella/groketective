@@ -99,25 +99,33 @@ bash scripts/run-feature-flags-pipeline.sh
 bash scripts/run-feature-flags-pipeline.sh --notion-keys /tmp/keys.txt --notion-done-keys /tmp/done.txt
 ```
 
-### Dogfood changelog (binary diff)
+### Dogfood install + changelog (binary diff)
+
+Uses the **sand-dogfood** update feed (`api2.cursor.sh`), same as Marcelo’s laptop `sync.py`. See **`.cursor/skills/install-grokbot-dogfood/SKILL.md`**.
 
 ```bash
-# Requires dogfood URL in env/Memory when public API fails (see prompt)
-export GROKBOT_DOGFOOD_DOWNLOAD_URL='https://...'
-export GROKBOT_DOGFOOD_VERSION='0.0.0'
+export GROKBOT_MACHINE_ID='…'   # Automation Memory; never commit
+bash scripts/grokbot-machine-id.sh --masked   # verify resolution
 bash scripts/install-dogfood-pair.sh --first-run
 bash scripts/run-dogfood-changelog-pipeline.sh
 ```
 
-Artifacts under `workspace/runs/<timestamp>/`. `versions/` holds AppImages (gitignored).
+| Script | Role |
+|--------|------|
+| `grokbot-dogfood-sync.sh` | Feed check, download, sha256, extract, rotate `current` / `current.prev` |
+| `grokbot-machine-id.sh` | Resolve id (env → keyring decrypt); `--masked` only |
+| `install-dogfood-pair.sh` | Sync + export `versions/dogfood-new` and `dogfood-previous` for diff |
+| `run-dogfood-changelog-pipeline.sh` | Extract both builds and run `diff-build-extracts.py` |
+
+**Machine id order:** (1) `GROKBOT_MACHINE_ID` / Automation Memory, (2) decrypt `sand-secrets.json` via GNOME keyring on a logged-in laptop, (3) fail with clear error. Raw ids are never printed or committed.
+
+Artifacts under `workspace/runs/<timestamp>/`. `versions/` holds sync state and AppImages (gitignored).
 
 ### Cursor Automation setup
 
 1. **Feature flags:** second automation using `daily-feature-flags-grokbot.md`; same Notion **Cursor Feature Flags** as cursor-detective; run after Cursor catalog pass.
-2. **Dogfood changelogs:** automation using `daily-dogfood-changelog-grokbot.md`; duplicate **Cursor Changelogs** in Notion → **Grok Bot Dogfood Changelogs**; set Memory ids per `docs/notion-grok-bot-dogfood-changelogs.md`.
-3. Enable Notion MCP; never commit database ids or dogfood URLs.
-
-**Stub:** `releaseTrack=dogfood` on the public download API returns 500 for `appName=sand`—set `GROKBOT_DOGFOOD_*` / Memory `dogfood_download_url` from your internal dogfood channel.
+2. **Dogfood changelogs:** automation using `daily-dogfood-changelog-grokbot.md`; set **`GROKBOT_MACHINE_ID`** in Memory; duplicate **Cursor Changelogs** → **Grok Bot Dogfood Changelogs** (`docs/notion-grok-bot-dogfood-changelogs.md`).
+3. Enable Notion MCP; never commit database ids, machine ids, or download URLs.
 
 ## Related skills (not bundled)
 
@@ -131,6 +139,8 @@ Artifacts under `workspace/runs/<timestamp>/`. `versions/` holds AppImages (giti
 
 ```text
 groketective/
+├── .cursor/
+│   └── skills/install-grokbot-dogfood/
 ├── .cursor-plugin/plugin.json
 ├── assets/logo.svg
 ├── docs/
