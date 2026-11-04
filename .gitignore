@@ -1,4 +1,6 @@
-.cursor/
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
 .scope.json
 *.log
 __pycache__/

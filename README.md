@@ -146,6 +146,9 @@ groketective/
 ├── docs/
 ├── prompts/
 ├── scripts/
+│   ├── grokbot_dogfood/
+│   ├── grokbot-dogfood-sync.sh
+│   └── grokbot-machine-id.sh
 ├── skills/groketective/
 │   ├── SKILL.md
 │   ├── reference.md
