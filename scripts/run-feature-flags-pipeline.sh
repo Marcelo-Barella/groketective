@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 previous_names=""
+notion_keys=""
+notion_done_keys=""
 
 while (($#)); do
   case "$1" in
@@ -13,8 +15,18 @@ while (($#)); do
       previous_names="$2"
       shift 2
       ;;
+    --notion-keys)
+      (($# >= 2)) || { printf 'Error: --notion-keys requires a value\n' >&2; exit 1; }
+      notion_keys="$2"
+      shift 2
+      ;;
+    --notion-done-keys)
+      (($# >= 2)) || { printf 'Error: --notion-done-keys requires a value\n' >&2; exit 1; }
+      notion_done_keys="$2"
+      shift 2
+      ;;
     -h|--help)
-      printf 'Usage: %s [--previous-names PATH]\n' "$0"
+      printf 'Usage: %s [--previous-names PATH] [--notion-keys PATH] [--notion-done-keys PATH]\n' "$0"
       exit 0
       ;;
     *)
@@ -59,6 +71,14 @@ python3 "$SCRIPT_DIR/catalog-feature-flags.py" "${catalog_args[@]}"
 
 cp -f "$run_dir/feature-flags-names.txt" "$ROOT_DIR/workspace/last-feature-flags-names.txt"
 cp -f "$run_dir/feature-flags-inventory.json" "$ROOT_DIR/workspace/last-feature-flags-inventory.json"
+
+if [[ -n "$notion_keys" ]]; then
+  gap_args=(--inventory "$run_dir/feature-flags-inventory.json" --output-dir "$run_dir")
+  gap_args+=(--notion-keys "$notion_keys")
+  [[ -n "$notion_done_keys" ]] && gap_args+=(--notion-done-keys "$notion_done_keys")
+  python3 "$SCRIPT_DIR/compute-notion-flag-gaps.py" "${gap_args[@]}"
+  printf 'notion_gaps=%s\n' "$run_dir/notion-flag-gaps.json"
+fi
 
 printf 'run_dir=%s\n' "$run_dir"
 printf 'manifest=%s\n' "$run_dir/manifest.json"

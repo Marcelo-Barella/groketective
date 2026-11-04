@@ -1,71 +1,69 @@
-# Grok Bot feature flags — daily automation
+# Grok Bot feature flags — extension of Cursor Feature Flags automation
 
-Detect new **Grok Bot (sand)** client feature gates in `resources/app.asar`, run one full **Groketective** investigation per new flag, and upsert Done rows in the **Grok Bot Feature Flags** Notion database (configure in Cursor Automation Memory).
+**Extension** of the daily [cursor-detective feature-flag flow](https://github.com/Marcelo-Barella/cursor-detective/blob/main/prompts/daily-feature-flags.md). Grok Bot (`sand`) and Cursor share the **same client gate registry** (~1.1k keys). The Cursor automation catalogs `kFe` from Cursor dev builds and fills **Cursor Feature Flags** in Notion. This automation catalogs the same keys from a **Grok Bot stable** `app.asar` and **fills gaps only** in that **same Notion database**—never a separate Grok-only flags database.
 
-Reference implementation: [cursor-detective `prompts/daily-feature-flags.md`](https://github.com/Marcelo-Barella/cursor-detective/blob/main/prompts/daily-feature-flags.md).
+## Relationship to cursor-detective
 
-## Memory keys
+| Step | cursor-detective (Cursor) | groketective extension (Grok Bot) |
+|------|---------------------------|-----------------------------------|
+| Build | Cursor dev AppImage | Grok Bot stable AppImage (`appName=sand`) |
+| Catalog source | workbench `kFe` | `resources/app.asar` strings scan |
+| Notion | **Cursor Feature Flags** | **Same database** |
+| Detective skill | Cursor Detective | Groketective |
+| Work queue | Keys missing in Notion | **Dedupe**: skip Keys already **Done** with complete Cursor Detective rows; investigate missing Keys, stubs, or sand-only evidence |
 
-Store and read these from Automation Memory (local dry-runs: copy `scripts/automation-memory.example.json` to `workspace/automation-memory.json`):
+Run this automation **after** the Cursor feature-flag automation (or on a staggered schedule). **Notion Keys are authoritative** for deduplication—not Memory alone.
 
-- `version` — last processed Grok Bot version
-- `commit_sha` — last processed commit
-- `download_url` — last processed download URL
-- `known_flag_names` — newline-separated catalog backup (Notion Keys remain authoritative for "new")
+## Memory keys (Grok stable extension)
 
-**First run** (version fields empty): `install-pair.sh --first-run`.
+- `grok_stable_version`, `grok_stable_commit_sha`, `grok_stable_download_url` — last processed **stable** sand build (optional split from Cursor Memory)
+- `known_flag_names` — optional backup; Notion Keys win
 
-**Subsequent runs**: reinstall previous from Memory URL; skip if `commit_sha` unchanged.
+Use the same Notion data source id as cursor-detective (**Cursor Feature Flags**).
 
 ## Pipeline
 
-1. Run `bash scripts/setup-deps.sh`
-2. Install pair:
-   - First run: `bash scripts/install-pair.sh --first-run`
-   - Else: `bash scripts/install-pair.sh --previous-url "$download_url" --previous-version "$version" --previous-commit "$commit_sha"`
-3. Parse stdout. If `skip=true`, log "No new Grok Bot build" and exit 0.
-4. Run `bash scripts/run-feature-flags-pipeline.sh` (optionally `--previous-names` from Memory `known_flag_names`). Extracts the **new** AppImage and catalogs client gates from `app.asar`.
-5. Read the latest `workspace/runs/*/manifest.json` and `feature-flags-inventory.json`.
-6. Query Notion **Grok Bot Feature Flags** (data source id in Memory). Build `new_flags` = catalog names **missing** from Notion `Key`.
-7. If `new_flags` is empty, update Memory version/commit/download_url, refresh `known_flag_names`, exit 0.
-8. Spawn **one Groketective subagent per new flag** (parallel waves of up to **4**). Each subagent must:
-   - Follow `skills/groketective/SKILL.md` fully
-   - Theme: `feature-flag-<kebab-flag-name>`
-   - Use `app_asar` from the manifest (extract dir under the same run)
-   - Prefer inventory `client` / `default` from `feature-flags-inventory.json`
-   - Write plan to `workspace/runs/<timestamp>/plans/groketective-feature-flag-<kebab>.plan.md`
-9. For each completed run, create or update the Notion row (Name, Key, Category, Client, Bundled Default, What it changes, Confidence, Evidence, Modules, Detective Plan, Status=`Done`, Grok Bot Version, Last Verified). Page body = full plan markdown.
-10. Update Memory: `version`, `commit_sha`, `download_url`, `known_flag_names`.
-11. Write backup summary to `workspace/runs/<timestamp>/feature-flags-sync.md`
+1. `bash scripts/setup-deps.sh`
+2. `bash scripts/install-pair.sh --first-run` or with `--previous-url` / `--previous-version` / `--previous-commit` from Memory
+3. If `skip=true`, exit 0
+4. `bash scripts/run-feature-flags-pipeline.sh` — catalogs shared gates from Grok Bot extract
+5. Query Notion **Cursor Feature Flags**. Build `gap_flags`:
+   - Key **missing** from Notion, **or**
+   - Row exists but Status ≠ Done / stub, **or**
+   - Cursor row lacks sand-only fields you store (Statsig bootstrap path, `sand-feature-flag-overrides`, grep-asar evidence)
+6. Optional local helper: export Notion Keys to a file and run  
+   `bash scripts/run-feature-flags-pipeline.sh --notion-keys keys.txt --notion-done-keys done.txt`  
+   → `notion-flag-gaps.json` / `gap-flag-names.txt`
+7. If `gap_flags` empty, update Memory and exit 0
+8. **One Groketective subagent per gap flag** (waves of 4). Theme: `feature-flag-<kebab>`. Output:  
+   `workspace/runs/<timestamp>/plans/groketective-feature-flag-<kebab>.plan.md`
+9. **Update existing Notion rows by Key** (create only when Key truly absent). Merge Grok Bot evidence into Evidence / Modules / Detective Plan; set Status=Done when complete. Page body may append Groketective plan sections—do not duplicate Cursor Detective content blindly.
+10. `workspace/runs/<timestamp>/feature-flags-grok-extension.md` summary
 
-## Groketective subagent prompt (per flag)
+## Groketective subagent prompt (per gap flag)
 
 ```
-You are running a COMPLETE Groketective investigation.
+Extension run for shared client gate registry (Cursor Feature Flags Notion DB).
 Theme: feature-flag-<kebab>
+Flag: `<flag_name>`
 
-MANDATORY: Follow skills/groketective/SKILL.md fully. Do NOT shortcut.
+Follow skills/groketective/SKILL.md. Focus sand-only observability:
+- app.asar grep-asar for checkFeatureGate / gate name
+- ~/.config/Grok Bot/sand-statsig-bootstrap.json (redacted)
+- sand-feature-flag-overrides.json if present
 
-Flag under study: `<flag_name>`
+Paths from parent:
+- app_asar: <manifest>
+- extract: workspace/runs/<timestamp>/extract/new/
+- inventory: workspace/runs/<timestamp>/feature-flags-inventory.json
+- plan: workspace/runs/<timestamp>/plans/groketective-feature-flag-<kebab>.plan.md
 
-Fixed paths from parent:
-- Skill scripts: skills/groketective/scripts/
-- App asar: <app_asar from manifest>
-- Extract tree: workspace/runs/<timestamp>/extract/new/
-- Inventory: workspace/runs/<timestamp>/feature-flags-inventory.json
-- Output plan: workspace/runs/<timestamp>/plans/groketective-feature-flag-<kebab>.plan.md
-
-Confirm registry entry, grep-asar call sites (or registry-only), Statsig bootstrap / local overrides when probeable, modules touched, and Confirmed/Inferred/Unknown tags.
+Tag Confirmed/Inferred/Unknown. Prefer inventory default when present.
+If Cursor Detective already documented this Key, only add delta evidence.
 ```
-
-## Notion / credentials (Marcelo)
-
-- Create or point Automation Memory at the **Grok Bot Feature Flags** Notion database id.
-- Enable Notion MCP (or equivalent) on the Cloud Agent automation.
-- Do **not** commit database ids or integration tokens to git.
 
 ## Constraints
 
-- Do not commit or push to git from the automation run unless explicitly instructed.
-- Use `scripts/` for download/extract/catalog; do not modify host Grok Bot install trees outside `versions/` and `workspace/`.
-- Grok Bot `releaseTrack=dev` is unavailable on the public download API; this pipeline uses **stable** only.
+- Same Notion database as cursor-detective; dedupe on Key; no parallel Grok flags DB
+- Do not re-run Groketective for Keys already Done with complete Cursor coverage unless inventory default/client changed vs Notion
+- Stable sand via public API; dogfood is for the **changelog** automation, not this extension

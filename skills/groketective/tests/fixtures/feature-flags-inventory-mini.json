@@ -1,0 +1,6 @@
+{
+  "flags": [
+    {"name": "legacy_flag", "client": true, "default": false, "shape": "default"},
+    {"name": "grok_bot_task_subagent_roster", "client": true, "default": true, "shape": "fallbackValues"}
+  ]
+}

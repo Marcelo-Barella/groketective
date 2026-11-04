@@ -80,37 +80,44 @@ Run smoke tests:
 
 ## Cloud automations (Grok Bot tests)
 
-Mirrors the [cursor-detective](https://github.com/Marcelo-Barella/cursor-detective) daily pipelines (Cursor dev builds + feature flags + changelog-driven detective runs). This repo adds the **Grok Bot** side: download stable sand builds, diff client gates, and track Grok-relevant changelog posts.
+Extends [cursor-detective](https://github.com/Marcelo-Barella/cursor-detective) daily flows. Client gates are **shared** between Cursor and Grok Bot (~1.1k keys); Grok work **fills gaps** in the same **Cursor Feature Flags** Notion database. Dogfood **binary diff** replaces any changelog web scraping.
 
-| Automation | Prompt | Pipeline script |
-|------------|--------|-----------------|
-| Feature flags | `prompts/daily-feature-flags-grokbot.md` | `scripts/run-feature-flags-pipeline.sh` |
-| Changelog / release notes | `prompts/daily-changelog-grokbot.md` | `scripts/run-changelog-pipeline.sh` |
+| Automation | Prompt | Pipeline |
+|------------|--------|----------|
+| Feature flags (Notion gap-fill) | `prompts/daily-feature-flags-grokbot.md` | `install-pair.sh` → `run-feature-flags-pipeline.sh` (+ optional `--notion-keys`) |
+| Dogfood changelogs | `prompts/daily-dogfood-changelog-grokbot.md` | `install-dogfood-pair.sh` → `run-dogfood-changelog-pipeline.sh` |
 
-### Manual dry-run (feature flags)
+Notion layout for dogfood rows: [`docs/notion-grok-bot-dogfood-changelogs.md`](docs/notion-grok-bot-dogfood-changelogs.md). Stub data source ids: `scripts/automation-memory.example.json`.
+
+### Feature flags extension (stable sand)
 
 ```bash
 bash scripts/setup-deps.sh
 bash scripts/install-pair.sh --first-run
 bash scripts/run-feature-flags-pipeline.sh
+# Optional dry-run gap list after exporting Notion Keys to /tmp/keys.txt:
+bash scripts/run-feature-flags-pipeline.sh --notion-keys /tmp/keys.txt --notion-done-keys /tmp/done.txt
 ```
 
-Artifacts land under `workspace/runs/<timestamp>/` (`manifest.json`, inventories, `extract/new/`). `versions/` holds downloaded AppImages. Both paths are gitignored.
-
-### Manual dry-run (changelog)
+### Dogfood changelog (binary diff)
 
 ```bash
-bash scripts/run-changelog-pipeline.sh --pages 3 --filter grokbot
+# Requires dogfood URL in env/Memory when public API fails (see prompt)
+export GROKBOT_DOGFOOD_DOWNLOAD_URL='https://...'
+export GROKBOT_DOGFOOD_VERSION='0.0.0'
+bash scripts/install-dogfood-pair.sh --first-run
+bash scripts/run-dogfood-changelog-pipeline.sh
 ```
+
+Artifacts under `workspace/runs/<timestamp>/`. `versions/` holds AppImages (gitignored).
 
 ### Cursor Automation setup
 
-1. Create two Cursor Automations (scheduled daily or on your preferred trigger).
-2. Paste the corresponding prompt from `prompts/` as the agent instructions.
-3. Enable Notion MCP and set Memory fields from `scripts/automation-memory.example.json` (database ids are **not** committed).
-4. Optional: subscribe to stable Grok Bot commits via the same Memory keys as the feature-flag prompt.
+1. **Feature flags:** second automation using `daily-feature-flags-grokbot.md`; same Notion **Cursor Feature Flags** as cursor-detective; run after Cursor catalog pass.
+2. **Dogfood changelogs:** automation using `daily-dogfood-changelog-grokbot.md`; duplicate **Cursor Changelogs** in Notion → **Grok Bot Dogfood Changelogs**; set Memory ids per `docs/notion-grok-bot-dogfood-changelogs.md`.
+3. Enable Notion MCP; never commit database ids or dogfood URLs.
 
-**Open decisions for Marcelo:** Notion database ids/names, whether changelog should use `--filter all` with manual Notion triage, and any dedicated Grok Bot release-notes URL if posts are not on cursor.com/changelog.
+**Stub:** `releaseTrack=dogfood` on the public download API returns 500 for `appName=sand`—set `GROKBOT_DOGFOOD_*` / Memory `dogfood_download_url` from your internal dogfood channel.
 
 ## Related skills (not bundled)
 
@@ -126,6 +133,7 @@ bash scripts/run-changelog-pipeline.sh --pages 3 --filter grokbot
 groketective/
 ├── .cursor-plugin/plugin.json
 ├── assets/logo.svg
+├── docs/
 ├── prompts/
 ├── scripts/
 ├── skills/groketective/

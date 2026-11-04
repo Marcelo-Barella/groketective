@@ -164,6 +164,7 @@ def main() -> None:
     inventory = {
         "source": "client gates in resources/app.asar (strings scan)",
         "product": "Grok Bot (sand)",
+        "shared_with": "Cursor IDE workbench kFe (same client gate keys)",
         "version": version,
         "commit_sha": commit_sha,
         "download_url": download_url,
