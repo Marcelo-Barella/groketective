@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -87,26 +86,6 @@ def _version_from_asar(asar: Path) -> str | None:
     except Exception:
         pkg.unlink(missing_ok=True)
         return None
-
-
-def needs_track_changed(installed_version: str) -> bool:
-    lower = installed_version.lower()
-    if "dogfood" in lower:
-        return False
-    if re.search(r"-(dogfood|df)\b", lower):
-        return False
-    return True
-
-
-def build_feed_url(installed_version: str, machine_id: str) -> str:
-    arch = linux_arch()
-    url = (
-        f"{FEED_BASE}/linux-{arch}/{CHANNEL}/"
-        f"{installed_version}/{machine_id}/stable"
-    )
-    if needs_track_changed(installed_version):
-        url += "?trackChanged=1"
-    return url
 
 
 def sha256_file(path: Path) -> str:

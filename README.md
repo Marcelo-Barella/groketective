@@ -117,7 +117,9 @@ bash scripts/run-dogfood-changelog-pipeline.sh
 | `install-dogfood-pair.sh` | Sync + export `versions/dogfood-new` and `dogfood-previous` for diff |
 | `run-dogfood-changelog-pipeline.sh` | Extract both builds and run `diff-build-extracts.py` |
 
-**Machine id order:** (1) `GROKBOT_MACHINE_ID` / Automation Memory, (2) decrypt `sand-secrets.json` via GNOME keyring on a logged-in laptop, (3) fail with clear error. Raw ids are never printed or committed.
+**Machine id order:** (1) `GROKBOT_MACHINE_ID` / Automation Memory, (2) decrypt existing `sand-secrets.json`, (3) bootstrap: official Linux install from [x.ai/bot](https://x.ai/bot) (headless: stable `cursor.com/api/download` + `xvfb-run` launch), then decrypt, (4) clear error. Raw ids are never printed or committed.
+
+**Headless limits:** `v11` ids need an unlocked GNOME keyring to decrypt after bootstrap; Cloud Agents should set `GROKBOT_MACHINE_ID`. The x.ai/bot HTML page returns 403 to headless fetch — bootstrap uses the public stable download API with `Referer: https://x.ai/bot`.
 
 Artifacts under `workspace/runs/<timestamp>/`. `versions/` holds sync state and AppImages (gitignored).
 

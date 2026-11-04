@@ -13,39 +13,47 @@ SECRETS_KEY = "cursor-machine-id"
 V11_PREFIX = b"v11"
 
 
-def resolve_machine_id(*, allow_keyring: bool = True) -> str:
-    env_val = os.environ.get("GROKBOT_MACHINE_ID", "").strip()
-    if env_val:
-        return env_val
+class MachineIdError(RuntimeError):
+    pass
 
-    secrets_path = Path(
-        os.environ.get("GROKBOT_CONFIG_ROOT", str(DEFAULT_CONFIG_ROOT))
-    ).expanduser() / "sand-secrets.json"
+
+def _config_root() -> Path:
+    return Path(os.environ.get("GROKBOT_CONFIG_ROOT", str(DEFAULT_CONFIG_ROOT))).expanduser()
+
+
+def _secrets_path() -> Path:
+    return _config_root() / "sand-secrets.json"
+
+
+def _read_secrets_raw(path: Path | None = None) -> str:
+    secrets_path = path or _secrets_path()
     if not secrets_path.is_file():
         raise MachineIdError(
-            "GROKBOT_MACHINE_ID is unset and sand-secrets.json was not found. "
-            f"Expected {secrets_path}"
+            "sand-secrets.json not found at "
+            f"{secrets_path} (launch Grok Bot once or run bootstrap)"
         )
-
     try:
         payload = json.loads(secrets_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise MachineIdError(f"sand-secrets.json is invalid JSON: {exc}") from exc
-
     raw = payload.get(SECRETS_KEY)
     if not isinstance(raw, str) or not raw.strip():
         raise MachineIdError(
             f"sand-secrets.json missing string key {SECRETS_KEY!r}"
         )
+    return raw
 
+
+def _machine_id_from_secrets(*, allow_keyring: bool) -> str:
+    raw = _read_secrets_raw()
     decoded = base64.b64decode(raw, validate=False)
     if decoded.startswith(V11_PREFIX):
         if not allow_keyring:
             raise MachineIdError(
-                "Encrypted machine id requires keyring; set GROKBOT_MACHINE_ID for automation"
+                "Encrypted machine id requires keyring; set GROKBOT_MACHINE_ID "
+                "or unlock GNOME keyring for bootstrap"
             )
         return _decrypt_v11(decoded[3:])
-
     try:
         text = decoded.decode("utf-8").strip()
     except UnicodeDecodeError as exc:
@@ -55,8 +63,33 @@ def resolve_machine_id(*, allow_keyring: bool = True) -> str:
     return text
 
 
-class MachineIdError(RuntimeError):
-    pass
+def resolve_machine_id(
+    *,
+    allow_keyring: bool = True,
+    allow_bootstrap: bool = True,
+) -> str:
+    env_val = os.environ.get("GROKBOT_MACHINE_ID", "").strip()
+    if env_val:
+        return env_val
+
+    secrets_path = _secrets_path()
+    if secrets_path.is_file():
+        try:
+            return _machine_id_from_secrets(allow_keyring=allow_keyring)
+        except MachineIdError:
+            if not allow_bootstrap:
+                raise
+
+    if allow_bootstrap:
+        from grokbot_dogfood.bootstrap import bootstrap_machine_id
+
+        return bootstrap_machine_id(allow_keyring=allow_keyring)
+
+    raise MachineIdError(
+        "GROKBOT_MACHINE_ID is unset, no usable sand-secrets.json, and bootstrap "
+        "is disabled. Install Grok Bot from https://x.ai/bot or set "
+        "GROKBOT_MACHINE_ID in Automation Memory."
+    )
 
 
 def _decrypt_v11(ciphertext: bytes) -> str:
@@ -111,15 +144,17 @@ def _keyring_password() -> str:
                 return secret.decode("utf-8")
             return str(secret)
     raise MachineIdError(
-        "No GNOME Keyring item for Grok Bot Safe Storage; set GROKBOT_MACHINE_ID"
+        "No GNOME Keyring item for Grok Bot Safe Storage; unlock keyring or set "
+        "GROKBOT_MACHINE_ID"
     )
 
 
 def main(argv: list[str] | None = None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     masked_only = "--masked" in argv or "--status" in argv
+    allow_bootstrap = "--no-bootstrap" not in argv
     try:
-        mid = resolve_machine_id()
+        mid = resolve_machine_id(allow_bootstrap=allow_bootstrap)
     except MachineIdError as exc:
         print(f"error={exc}", file=sys.stderr)
         return 1

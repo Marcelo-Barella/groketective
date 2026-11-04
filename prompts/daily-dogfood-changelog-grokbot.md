@@ -28,10 +28,13 @@ Optional: `GROKBOT_DOGFOOD_SYNC_ROOT` (default `versions/grok-bot-dogfood` under
 ## Machine id
 
 1. Automation Memory / env `GROKBOT_MACHINE_ID`
-2. Else decrypt `sand-secrets.json` + keyring (local laptop only)
-3. Else fail — run `bash scripts/grokbot-machine-id.sh --masked` to verify setup
+2. Existing install: decrypt `sand-secrets.json` + keyring
+3. Bootstrap: official Linux stable from [x.ai/bot](https://x.ai/bot) (see skill — headless uses download API + `xvfb-run` launch), then decrypt
+4. Fail — `bash scripts/grokbot-machine-id.sh --masked` (never logs raw id)
 
-If the feed returns 401/403, rotate or fix `GROKBOT_MACHINE_ID` (do not print it).
+Headless: D-Bus + `gnome-keyring-daemon` + `xvfb-run`; prefer Memory id on Cloud Agents. Set `GROKBOT_DISABLE_BOOTSTRAP=1` to skip launch bootstrap.
+
+If the feed returns 401/403, fix `GROKBOT_MACHINE_ID` (do not print it).
 
 ## First run
 
